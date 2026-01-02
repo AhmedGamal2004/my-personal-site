@@ -49,32 +49,71 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageInput = document.getElementById('message-input');
     const postsFeed = document.getElementById('posts-feed');
 
-    sendBtn.addEventListener('click', () => {
+    // Load messages on startup
+    fetchMessages();
+
+    async function fetchMessages() {
+        try {
+            const response = await fetch('/.netlify/functions/get-messages');
+            const messages = await response.json();
+            postsFeed.innerHTML = ''; // Clear feed
+            if (messages.length === 0) {
+                postsFeed.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">No messages yet. Be the first!</p>';
+            } else {
+                messages.forEach(msg => {
+                    displayPost(msg.content, msg.created_at);
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching messages:', error);
+            postsFeed.innerHTML = '<p style="text-align: center; color: #ff4d4d;">Failed to load messages.</p>';
+        }
+    }
+
+    sendBtn.addEventListener('click', async () => {
         const text = messageInput.value.trim();
-        if (text) {
-            addPost(text);
-            messageInput.value = '';
+        if (!text) return;
+
+        // Optimistic UI update
+        const tempId = Date.now();
+        displayPost(text, new Date().toISOString(), true);
+        messageInput.value = '';
+
+        try {
+            const response = await fetch('/.netlify/functions/create-message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: text, type: 'text' })
+            });
+
+            if (!response.ok) throw new Error('Failed to save message');
+
+            // Refresh feed to get final data
+            fetchMessages();
+        } catch (error) {
+            console.error('Error saving message:', error);
+            alert('Was not able to save your message. Please check your connection.');
+            fetchMessages(); // Revert UI
         }
     });
 
-    function addPost(text) {
+    function displayPost(text, timestamp, isOptimistic = false) {
         const postDiv = document.createElement('div');
         postDiv.className = 'post-card';
+        if (isOptimistic) postDiv.style.opacity = '0.7';
 
-        // Formatted timestamp
-        const now = new Date();
-        const timeString = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const date = new Date(timestamp);
+        const timeString = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
         postDiv.innerHTML = `
             <p class="post-text">${escapeHtml(text)}</p>
             <span class="post-date">${timeString}</span>
         `;
 
-        // Add to top
         postsFeed.insertBefore(postDiv, postsFeed.firstChild);
     }
 
-    // Audio Upload Logic
+    // Audio Upload Logic (Simplified for now as backend storage for files is complex)
     const audioInput = document.getElementById('audio-input');
     const audioFeed = document.getElementById('audio-feed');
 
@@ -82,25 +121,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const file = e.target.files[0];
         if (file) {
             addAudioPost(file);
-            // Reset input so same file can be selected again if needed
             audioInput.value = '';
         }
     });
 
     function addAudioPost(file) {
         const url = URL.createObjectURL(file);
-
         const audioDiv = document.createElement('div');
         audioDiv.className = 'audio-card';
-
-        // Basic audio player custom markup could go here, for now using default
         const audioEl = document.createElement('audio');
         audioEl.controls = true;
         audioEl.src = url;
 
         const nameLabel = document.createElement('div');
         nameLabel.style.marginBottom = '8px';
-        nameLabel.textContent = file.name;
+        nameLabel.textContent = file.name + " (Preview Only)";
         nameLabel.style.color = 'var(--text-secondary)';
         nameLabel.style.fontSize = '0.9rem';
 
@@ -108,13 +143,10 @@ document.addEventListener('DOMContentLoaded', () => {
         container.style.width = '100%';
         container.appendChild(nameLabel);
         container.appendChild(audioEl);
-
         audioDiv.appendChild(container);
-
         audioFeed.insertBefore(audioDiv, audioFeed.firstChild);
     }
 
-    // Utility to prevent XSS
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text;
