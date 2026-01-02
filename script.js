@@ -65,6 +65,10 @@ document.addEventListener('DOMContentLoaded', () => {
     coverUpload.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (file) {
+            if (file.size > 2 * 1024 * 1024) { // 2MB limit for images
+                alert('Image is too large. Please keep it under 2MB.');
+                return;
+            }
             const base64 = await toBase64(file);
             coverDisplay.style.backgroundImage = `url('${base64}')`;
             updateProfile({ cover: base64 });
@@ -74,6 +78,10 @@ document.addEventListener('DOMContentLoaded', () => {
     avatarUpload.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (file) {
+            if (file.size > 2 * 1024 * 1024) { // 2MB limit for images
+                alert('Image is too large. Please keep it under 2MB.');
+                return;
+            }
             const base64 = await toBase64(file);
             avatarImg.src = base64;
             avatarImg.style.display = 'block';

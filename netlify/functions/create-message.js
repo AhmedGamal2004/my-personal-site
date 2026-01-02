@@ -5,20 +5,25 @@ export default async (req) => {
         return new Response("Method Not Allowed", { status: 405 });
     }
 
-    const body = await req.json();
-    const content = body.content;
-    const type = body.type || 'text';
+    try {
+        const body = await req.json();
+        const content = body.content;
+        const type = body.type || 'text';
 
-    if (!content) {
-        return new Response("Content is required", { status: 400 });
+        if (!content) {
+            return new Response("Content is required", { status: 400 });
+        }
+
+        const sql = neon(process.env.DATABASE_URL);
+        await sql`INSERT INTO messages (content, type) VALUES (${content}, ${type})`;
+
+        return new Response(JSON.stringify({ success: true }), {
+            headers: { "Content-Type": "application/json" }
+        });
+    } catch (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" }
+        });
     }
-
-    const sql = neon();
-
-    // Insert message into database
-    await sql`INSERT INTO messages (content, type) VALUES (${content}, ${type})`;
-
-    return new Response(JSON.stringify({ success: true }), {
-        headers: { "Content-Type": "application/json" }
-    });
 };
