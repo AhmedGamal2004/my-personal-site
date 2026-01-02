@@ -15,7 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Persistence Logic ---
 
-    // Load profile and messages on startup
     fetchProfile();
     fetchMessages();
 
@@ -48,7 +47,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Editable Name & Bio
     nameEl.setAttribute('contenteditable', 'true');
     bioEl.setAttribute('contenteditable', 'true');
 
@@ -61,11 +59,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Image Upload with Persistence
     coverUpload.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (file) {
-            if (file.size > 2 * 1024 * 1024) { // 2MB limit for images
+            if (file.size > 2 * 1024 * 1024) {
                 alert('Image is too large. Please keep it under 2MB.');
                 return;
             }
@@ -78,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
     avatarUpload.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (file) {
-            if (file.size > 2 * 1024 * 1024) { // 2MB limit for images
+            if (file.size > 2 * 1024 * 1024) {
                 alert('Image is too large. Please keep it under 2MB.');
                 return;
             }
@@ -90,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Tab Switching Logic
+    // Navigation
     const tabs = document.querySelectorAll('.tab-btn');
     const contents = document.querySelectorAll('.tab-content');
 
@@ -104,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Text & Audio Feed Logic
+    // Messaging & Audio
     async function fetchMessages() {
         try {
             const response = await fetch('/.netlify/functions/get-messages');
@@ -118,9 +115,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 messages.forEach(msg => {
                     if (msg.type === 'audio') {
-                        displayAudio(msg.content, msg.created_at);
+                        displayAudio(msg.id, msg.content, msg.created_at);
                     } else {
-                        displayPost(msg.content, msg.created_at);
+                        displayPost(msg.id, msg.content, msg.created_at);
                     }
                 });
             }
@@ -132,9 +129,9 @@ document.addEventListener('DOMContentLoaded', () => {
     sendBtn.addEventListener('click', async () => {
         const text = messageInput.value.trim();
         if (!text) return;
-        displayPost(text, new Date().toISOString(), true);
         messageInput.value = '';
-        saveMessage(text, 'text');
+        await saveMessage(text, 'text');
+        fetchMessages();
     });
 
     async function saveMessage(content, type) {
@@ -144,23 +141,47 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ content, type })
             });
-            if (response.ok) fetchMessages();
         } catch (error) {
             console.error('Error saving message:', error);
         }
     }
 
-    function displayPost(text, timestamp, isOptimistic = false) {
-        const postDiv = document.createElement('div');
-        postDiv.className = 'post-card';
-        if (isOptimistic) postDiv.style.opacity = '0.7';
-        const date = new Date(timestamp);
-        const timeString = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        postDiv.innerHTML = `<p class="post-text">${escapeHtml(text)}</p><span class="post-date">${timeString}</span>`;
-        postsFeed.insertBefore(postDiv, postsFeed.firstChild);
+    async function deleteMessage(id) {
+        if (!confirm('Are you sure you want to delete this?')) return;
+        try {
+            const response = await fetch('/.netlify/functions/delete-message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id })
+            });
+            if (response.ok) fetchMessages();
+        } catch (error) {
+            console.error('Error deleting message:', error);
+        }
     }
 
-    // Audio Persistence
+    function createDeleteBtn(id) {
+        const btn = document.createElement('button');
+        btn.className = 'delete-btn';
+        btn.innerHTML = '🗑️';
+        btn.onclick = () => deleteMessage(id);
+        return btn;
+    }
+
+    function displayPost(id, text, timestamp) {
+        const postDiv = document.createElement('div');
+        postDiv.className = 'post-card';
+        const date = new Date(timestamp);
+        const timeString = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        postDiv.innerHTML = `
+            <p class="post-text">${escapeHtml(text)}</p>
+            <span class="post-date">${timeString}</span>
+        `;
+        postDiv.appendChild(createDeleteBtn(id));
+        postsFeed.appendChild(postDiv);
+    }
+
     audioInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -169,17 +190,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
             const base64 = await toBase64(file);
-            displayAudio(base64, new Date().toISOString(), true);
-            saveMessage(base64, 'audio');
             audioInput.value = '';
+            await saveMessage(base64, 'audio');
+            fetchMessages();
         }
     });
 
-    function displayAudio(base64, timestamp, isOptimistic = false) {
+    function displayAudio(id, base64, timestamp) {
         const audioDiv = document.createElement('div');
         audioDiv.className = 'audio-card';
-        if (isOptimistic) audioDiv.style.opacity = '0.7';
-
         const date = new Date(timestamp);
         const timeString = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -189,10 +208,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div style="margin-top: 8px; font-size: 0.8rem; color: var(--text-secondary); text-align: right;">${timeString}</div>
             </div>
         `;
-        audioFeed.insertBefore(audioDiv, audioFeed.firstChild);
+        audioDiv.appendChild(createDeleteBtn(id));
+        audioFeed.appendChild(audioDiv);
     }
 
-    // Helpers
     function toBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
