@@ -327,7 +327,8 @@ button#send-btn:hover {
 .post-actions {
     display: flex;
     gap: 8px;
-    opacity: 0.4;
+    opacity: 0.8;
+    /* Higher default visibility for mobile */
     transition: opacity 0.2s;
 }
 
@@ -339,10 +340,21 @@ button#send-btn:hover {
     background: transparent;
     border: none;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 1rem;
     padding: 4px;
     border-radius: 4px;
     transition: background 0.2s;
+    opacity: 1 !important;
+    /* Ensure visibility */
+    pointer-events: auto !important;
+}
+
+.msg-edit-btn {
+    /* Reset any inherited styles from profile .edit-btn */
+    position: static !important;
+    background: transparent !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
 }
 
 .action-btn:hover {

@@ -194,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function createEditBtn(postDiv, id, originalText) {
         const btn = document.createElement('button');
-        btn.className = 'action-btn edit-btn';
+        btn.className = 'action-btn msg-edit-btn';
         btn.innerHTML = '✏️';
         btn.title = 'Edit';
         btn.onclick = () => {
