@@ -134,6 +134,13 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchMessages();
     });
 
+    messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendBtn.click();
+        }
+    });
+
     async function saveMessage(content, type) {
         try {
             const response = await fetch('/.netlify/functions/create-message', {
