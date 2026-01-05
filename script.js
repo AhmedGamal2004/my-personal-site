@@ -248,6 +248,17 @@ document.addEventListener('DOMContentLoaded', () => {
             editActions.appendChild(saveBtn);
             editActions.appendChild(cancelBtn);
             postDiv.appendChild(editActions);
+
+            // Handle Keyboard shortcuts
+            textP.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    saveBtn.click();
+                }
+                if (e.key === 'Escape') {
+                    cancelEdit();
+                }
+            });
         };
         return btn;
     }
