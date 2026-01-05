@@ -18,6 +18,16 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchProfile();
     fetchMessages();
 
+    function parseEmojis(element) {
+        if (typeof twemoji !== 'undefined') {
+            twemoji.parse(element, {
+                folder: 'svg',
+                ext: '.svg',
+                base: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/'
+            });
+        }
+    }
+
     async function fetchProfile() {
         try {
             const response = await fetch('/.netlify/functions/get-profile');
@@ -30,6 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 avatarImg.style.display = 'block';
                 avatarPlaceholder.style.display = 'none';
             }
+            parseEmojis(nameEl);
+            parseEmojis(bioEl);
         } catch (error) {
             console.error('Error fetching profile:', error);
         }
@@ -187,6 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         postDiv.appendChild(createDeleteBtn(id));
         postsFeed.appendChild(postDiv);
+        parseEmojis(postDiv);
     }
 
     audioInput.addEventListener('change', async (e) => {

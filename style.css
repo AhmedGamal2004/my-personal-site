@@ -76,12 +76,12 @@ body {
 
 .cover-edit-btn {
     top: 10px;
-    right: 10px;
+    left: 10px;
 }
 
 .avatar-edit-btn {
     bottom: 0;
-    right: 0;
+    left: 0;
     border-radius: 50%;
     width: 30px;
     height: 30px;
@@ -233,7 +233,7 @@ button#send-btn {
     border-radius: 20px;
     font-weight: 600;
     cursor: pointer;
-    float: right;
+    float: left;
     transition: transform 0.2s;
 }
 
@@ -282,7 +282,7 @@ button#send-btn:hover {
     background-color: var(--card-bg);
     padding: var(--spacing-md);
     border-radius: var(--border-radius);
-    border-left: 3px solid var(--primary-color);
+    border-right: 3px solid var(--primary-color);
 }
 
 .post-text {
@@ -295,7 +295,14 @@ button#send-btn:hover {
     font-size: 0.8rem;
     color: var(--text-secondary);
     display: block;
-    text-align: right;
+    text-align: left;
+}
+
+img.emoji {
+    height: 1.2em;
+    width: 1.2em;
+    margin: 0 .05em 0 .1em;
+    vertical-align: -0.1em;
 }
 
 /* Audio Player Style */
