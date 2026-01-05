@@ -223,14 +223,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const saveBtn = document.createElement('button');
             saveBtn.textContent = 'Save';
             saveBtn.className = 'save-btn';
-            saveBtn.onclick = async () => {
-                const newContent = textP.textContent.trim();
-                if (newContent && newContent !== originalContent) {
-                    await updateMessage(id, newContent);
-                } else {
-                    cancelEdit();
-                }
-            };
 
             const cancelBtn = document.createElement('button');
             cancelBtn.textContent = 'Cancel';
@@ -241,8 +233,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 textP.removeAttribute('contenteditable');
                 textP.textContent = originalContent;
                 actions.style.display = 'flex';
-                editActions.remove();
+                if (editActions.parentNode) editActions.remove();
             };
+
+            const handleSave = async () => {
+                const newContent = textP.innerText.trim();
+                if (newContent && newContent !== originalContent.trim()) {
+                    await updateMessage(id, newContent);
+                } else {
+                    cancelEdit();
+                }
+            };
+
+            saveBtn.onclick = handleSave;
             cancelBtn.onclick = cancelEdit;
 
             editActions.appendChild(saveBtn);
@@ -253,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
             textP.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    saveBtn.click();
+                    handleSave();
                 }
                 if (e.key === 'Escape') {
                     cancelEdit();
