@@ -18,15 +18,6 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchProfile();
     fetchMessages();
 
-    function parseEmojis(element) {
-        if (typeof twemoji !== 'undefined') {
-            twemoji.parse(element, {
-                folder: 'svg',
-                ext: '.svg',
-                base: 'https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/'
-            });
-        }
-    }
 
     async function fetchProfile() {
         try {
@@ -40,8 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 avatarImg.style.display = 'block';
                 avatarPlaceholder.style.display = 'none';
             }
-            parseEmojis(nameEl);
-            parseEmojis(bioEl);
         } catch (error) {
             console.error('Error fetching profile:', error);
         }
@@ -165,6 +154,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function updateMessage(id, content) {
+        try {
+            const response = await fetch('/.netlify/functions/update-message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, content })
+            });
+            if (response.ok) {
+                fetchMessages();
+            }
+        } catch (error) {
+            console.error('Error updating message:', error);
+        }
+    }
+
     async function deleteMessage(id) {
         if (!confirm('Are you sure you want to delete this?')) return;
         try {
@@ -181,9 +185,70 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function createDeleteBtn(id) {
         const btn = document.createElement('button');
-        btn.className = 'delete-btn';
+        btn.className = 'action-btn delete-btn';
         btn.innerHTML = '🗑️';
+        btn.title = 'Delete';
         btn.onclick = () => deleteMessage(id);
+        return btn;
+    }
+
+    function createEditBtn(postDiv, id, originalText) {
+        const btn = document.createElement('button');
+        btn.className = 'action-btn edit-btn';
+        btn.innerHTML = '✏️';
+        btn.title = 'Edit';
+        btn.onclick = () => {
+            const textP = postDiv.querySelector('.post-text');
+            const originalContent = textP.textContent;
+
+            // Create edit UI
+            postDiv.classList.add('editing');
+            textP.setAttribute('contenteditable', 'true');
+            textP.focus();
+
+            // Selection at end
+            const range = document.createRange();
+            const sel = window.getSelection();
+            range.selectNodeContents(textP);
+            range.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(range);
+
+            const actions = postDiv.querySelector('.post-actions');
+            actions.style.display = 'none';
+
+            const editActions = document.createElement('div');
+            editActions.className = 'edit-actions';
+
+            const saveBtn = document.createElement('button');
+            saveBtn.textContent = 'Save';
+            saveBtn.className = 'save-btn';
+            saveBtn.onclick = async () => {
+                const newContent = textP.textContent.trim();
+                if (newContent && newContent !== originalContent) {
+                    await updateMessage(id, newContent);
+                } else {
+                    cancelEdit();
+                }
+            };
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.textContent = 'Cancel';
+            cancelBtn.className = 'cancel-btn';
+
+            const cancelEdit = () => {
+                postDiv.classList.remove('editing');
+                textP.removeAttribute('contenteditable');
+                textP.textContent = originalContent;
+                actions.style.display = 'flex';
+                editActions.remove();
+            };
+            cancelBtn.onclick = cancelEdit;
+
+            editActions.appendChild(saveBtn);
+            editActions.appendChild(cancelBtn);
+            postDiv.appendChild(editActions);
+        };
         return btn;
     }
 
@@ -195,11 +260,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         postDiv.innerHTML = `
             <p class="post-text">${escapeHtml(text)}</p>
-            <span class="post-date">${timeString}</span>
+            <div class="post-meta">
+                <span class="post-date">${timeString}</span>
+                <div class="post-actions"></div>
+            </div>
         `;
-        postDiv.appendChild(createDeleteBtn(id));
+
+        const actionsDiv = postDiv.querySelector('.post-actions');
+        actionsDiv.appendChild(createEditBtn(postDiv, id, text));
+        actionsDiv.appendChild(createDeleteBtn(id));
+
         postsFeed.appendChild(postDiv);
-        parseEmojis(postDiv);
     }
 
     audioInput.addEventListener('change', async (e) => {

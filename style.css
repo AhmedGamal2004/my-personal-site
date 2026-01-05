@@ -1,3 +1,9 @@
+@font-face {
+    font-family: 'AppleColorEmoji';
+    src: url('unofficial_iOS18_S.ttf') format('truetype');
+    font-display: swap;
+}
+
 :root {
     --bg-color: #121212;
     --card-bg: #1e1e1e;
@@ -10,7 +16,7 @@
     --spacing-sm: 8px;
     --spacing-md: 16px;
     --spacing-lg: 24px;
-    --font-main: 'Tajawal', 'Inter', sans-serif;
+    --font-main: 'Tajawal', 'Inter', 'AppleColorEmoji', sans-serif;
 }
 
 * {
@@ -283,27 +289,92 @@ button#send-btn:hover {
     padding: var(--spacing-md);
     border-radius: var(--border-radius);
     border-right: 3px solid var(--primary-color);
+    position: relative;
+    transition: transform 0.2s;
+}
+
+.post-card.editing {
+    border-right-color: var(--secondary-color);
+    box-shadow: 0 0 10px rgba(3, 218, 198, 0.2);
 }
 
 .post-text {
     font-size: 1rem;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
     white-space: pre-wrap;
+    outline: none;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.post-card.editing .post-text {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px dashed var(--secondary-color);
+}
+
+.post-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
 }
 
 .post-date {
     font-size: 0.8rem;
     color: var(--text-secondary);
-    display: block;
-    text-align: left;
 }
 
-img.emoji {
-    height: 1.2em;
-    width: 1.2em;
-    margin: 0 .05em 0 .1em;
-    vertical-align: -0.1em;
+.post-actions {
+    display: flex;
+    gap: 8px;
+    opacity: 0.4;
+    transition: opacity 0.2s;
 }
+
+.post-card:hover .post-actions {
+    opacity: 1;
+}
+
+.action-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.action-btn:hover {
+    background: var(--accent-color);
+}
+
+.edit-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.save-btn,
+.cancel-btn {
+    padding: 6px 12px;
+    border-radius: 4px;
+    border: none;
+    font-size: 0.85rem;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.save-btn {
+    background-color: var(--secondary-color);
+    color: #000;
+}
+
+.cancel-btn {
+    background-color: var(--accent-color);
+    color: var(--text-secondary);
+}
+
 
 /* Audio Player Style */
 .audio-card {
