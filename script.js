@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const messageInput = document.getElementById('message-input');
     const postsFeed = document.getElementById('posts-feed');
     const audioInput = document.getElementById('audio-input');
+    const songNameInput = document.getElementById('song-name-input');
+    const artistNameInput = document.getElementById('artist-name-input');
     const audioFeed = document.getElementById('audio-feed');
 
     // --- Persistence Logic ---
@@ -116,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 messages.forEach(msg => {
                     if (msg.type === 'audio') {
-                        displayAudio(msg.id, msg.content, msg.created_at);
+                        displayAudio(msg.id, msg.content, msg.title, msg.artist, msg.created_at);
                     } else {
                         displayPost(msg.id, msg.content, msg.created_at);
                     }
@@ -142,12 +144,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    async function saveMessage(content, type) {
+    async function saveMessage(content, type, title = '', artist = '') {
         try {
             const response = await fetch('/.netlify/functions/create-message', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content, type })
+                body: JSON.stringify({ content, type, title, artist })
             });
         } catch (error) {
             console.error('Error saving message:', error);
@@ -289,32 +291,104 @@ document.addEventListener('DOMContentLoaded', () => {
 
     audioInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
+        const title = songNameInput.value.trim() || file.name.replace(/\.[^/.]+$/, "");
+        const artist = artistNameInput.value.trim() || 'Unknown Artist';
+
         if (file) {
-            if (file.size > 5 * 1024 * 1024) {
-                alert('File is too large. Please keep it under 5MB.');
+            if (file.size > 10 * 1024 * 1024) { // Increased to 10MB as theoretical limit, though Netlify is 6MB
+                alert('File is too large. Please keep it under 6MB for Netlify.');
                 return;
             }
             const base64 = await toBase64(file);
             audioInput.value = '';
-            await saveMessage(base64, 'audio');
+            songNameInput.value = '';
+            artistNameInput.value = '';
+            await saveMessage(base64, 'audio', title, artist);
             fetchMessages();
         }
     });
 
-    function displayAudio(id, base64, timestamp) {
+    function displayAudio(id, base64, title, artist, timestamp) {
         const audioDiv = document.createElement('div');
         audioDiv.className = 'audio-card';
         const date = new Date(timestamp);
         const timeString = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
         audioDiv.innerHTML = `
-            <div style="width: 100%;">
-                <audio controls src="${base64}" style="width: 100%;"></audio>
-                <div style="margin-top: 8px; font-size: 0.8rem; color: var(--text-secondary); text-align: right;">${timeString}</div>
+            <div class="card-actions"></div>
+            <div class="audio-info">
+                <span class="audio-title">${escapeHtml(title || 'Untitled')}</span>
+                <span class="audio-artist">${escapeHtml(artist || 'Unknown Artist')}</span>
             </div>
+            <div class="audio-controls-container">
+                <div class="audio-progress-bar">
+                    <div class="audio-progress-fill"></div>
+                </div>
+                <div class="audio-time-total">
+                    <span class="current-time">0:00</span>
+                    <span class="total-duration">0:00</span>
+                </div>
+            </div>
+            <div class="audio-main-controls">
+                <button class="ctrl-btn prev-btn">⏮</button>
+                <button class="ctrl-btn play-pause-btn">▶</button>
+                <button class="ctrl-btn next-btn">⏭</button>
+            </div>
+            <audio class="hidden-player" src="${base64}"></audio>
         `;
-        audioDiv.appendChild(createDeleteBtn(id));
+
+        const actionsDiv = audioDiv.querySelector('.card-actions');
+        actionsDiv.appendChild(createDeleteBtn(id));
+
+        const audio = audioDiv.querySelector('.hidden-player');
+        const playPauseBtn = audioDiv.querySelector('.play-pause-btn');
+        const progressBar = audioDiv.querySelector('.audio-progress-bar');
+        const progressFill = audioDiv.querySelector('.audio-progress-fill');
+        const currentTimeEl = audioDiv.querySelector('.current-time');
+        const durationEl = audioDiv.querySelector('.total-duration');
+
+        playPauseBtn.onclick = () => {
+            if (audio.paused) {
+                // Pause all other audios
+                document.querySelectorAll('audio').forEach(a => {
+                    if (a !== audio) {
+                        a.pause();
+                        const card = a.closest('.audio-card');
+                        if (card) card.querySelector('.play-pause-btn').innerHTML = '▶';
+                    }
+                });
+                audio.play();
+                playPauseBtn.innerHTML = '⏸';
+            } else {
+                audio.pause();
+                playPauseBtn.innerHTML = '▶';
+            }
+        };
+
+        audio.ontimeupdate = () => {
+            const percent = (audio.currentTime / audio.duration) * 100;
+            progressFill.style.width = percent + '%';
+            currentTimeEl.textContent = formatTime(audio.currentTime);
+        };
+
+        audio.onloadedmetadata = () => {
+            durationEl.textContent = formatTime(audio.duration);
+        };
+
+        progressBar.onclick = (e) => {
+            const rect = progressBar.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            audio.currentTime = pos * audio.duration;
+        };
+
         audioFeed.appendChild(audioDiv);
+    }
+
+    function formatTime(seconds) {
+        if (isNaN(seconds)) return "0:00";
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     }
 
     function toBase64(file) {

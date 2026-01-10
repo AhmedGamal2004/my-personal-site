@@ -6,16 +6,14 @@ export default async (req) => {
     }
 
     try {
-        const body = await req.json();
-        const content = body.content;
-        const type = body.type || 'text';
+        const { content, type = 'text', title, artist } = await req.json();
 
         if (!content) {
             return new Response("Content is required", { status: 400 });
         }
 
         const sql = neon(process.env.DATABASE_URL);
-        await sql`INSERT INTO messages (content, type) VALUES (${content}, ${type})`;
+        await sql`INSERT INTO messages (content, type, title, artist) VALUES (${content}, ${type}, ${title}, ${artist})`;
 
         return new Response(JSON.stringify({ success: true }), {
             headers: { "Content-Type": "application/json" }
