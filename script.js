@@ -156,12 +156,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function updateMessage(id, content) {
+    async function updateMessage(id, content, title, artist) {
         try {
+            const data = { id };
+            if (content !== undefined) data.content = content;
+            if (title !== undefined) data.title = title;
+            if (artist !== undefined) data.artist = artist;
+
             const response = await fetch('/.netlify/functions/update-message', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, content })
+                body: JSON.stringify(data)
             });
             if (response.ok) {
                 fetchMessages();
@@ -338,6 +343,20 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         const actionsDiv = audioDiv.querySelector('.card-actions');
+
+        // Add Edit Button for Audio
+        const editBtn = document.createElement('button');
+        editBtn.className = 'action-btn';
+        editBtn.innerHTML = '✏️';
+        editBtn.title = 'Edit Info';
+        editBtn.onclick = () => {
+            const newTitle = prompt('Enter new song title:', title || '');
+            const newArtist = prompt('Enter new artist name:', artist || '');
+            if (newTitle !== null || newArtist !== null) {
+                updateMessage(id, undefined, newTitle, newArtist);
+            }
+        };
+        actionsDiv.appendChild(editBtn);
         actionsDiv.appendChild(createDeleteBtn(id));
 
         const audio = audioDiv.querySelector('.hidden-player');
